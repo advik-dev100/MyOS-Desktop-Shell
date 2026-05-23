@@ -1,0 +1,870 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<title>MyOS</title>
+<link rel="stylesheet" href="style.css"/>
+</head>
+<body>
+
+<!-- Startup Animation -->
+<div class="startup-screen" id="startupScreen">
+  <div class="startup-logo">⌘</div>
+  <div class="startup-name">MyOS</div>
+  <div class="startup-bar"><div class="startup-fill" id="startupFill"></div></div>
+</div>
+
+<!-- Lock Screen -->
+<div class="lockscreen" id="lockscreen" style="display:none">
+  <div class="lock-bg" id="lockBg"></div>
+  <div class="lock-orb lock-orb1"></div>
+  <div class="lock-orb lock-orb2"></div>
+  <div class="lock-orb lock-orb3"></div>
+  <div class="lock-content">
+    <div class="lock-avatar">👤</div>
+    <div class="lock-time" id="lockTime"></div>
+    <div class="lock-date" id="lockDate"></div>
+    <div class="lock-pin-wrap glass-strong">
+      <div class="lock-label" id="lockLabel">Enter PIN</div>
+      <div class="pin-dots" id="pinDots">
+        <div class="pin-dot" id="d0"></div>
+        <div class="pin-dot" id="d1"></div>
+        <div class="pin-dot" id="d2"></div>
+        <div class="pin-dot" id="d3"></div>
+      </div>
+      <div class="pin-error" id="pinError"></div>
+      <div class="numpad">
+        <div class="num-btn" onclick="pinInput('1')">1</div>
+        <div class="num-btn" onclick="pinInput('2')">2</div>
+        <div class="num-btn" onclick="pinInput('3')">3</div>
+        <div class="num-btn" onclick="pinInput('4')">4</div>
+        <div class="num-btn" onclick="pinInput('5')">5</div>
+        <div class="num-btn" onclick="pinInput('6')">6</div>
+        <div class="num-btn" onclick="pinInput('7')">7</div>
+        <div class="num-btn" onclick="pinInput('8')">8</div>
+        <div class="num-btn" onclick="pinInput('9')">9</div>
+        <div class="num-btn num-zero" onclick="pinInput('0')">0</div>
+        <div class="num-btn del-btn" onclick="pinDelete()">⌫</div>
+      </div>
+    </div>
+    <div class="lock-customize glass-card" onclick="toggleLockCustomize()">🎨 Customize Lock Screen</div>
+    <div class="lock-customize-panel glass-strong" id="lockCustomizePanel" style="display:none">
+      <div class="lc-title">Lock Screen Style</div>
+      <div class="lc-row">
+        <span>Clock Style</span>
+        <select class="lc-select" onchange="setClockStyle(this.value)">
+          <option value="digital">Digital</option>
+          <option value="minimal">Minimal</option>
+        </select>
+      </div>
+      <div class="lc-row">
+        <span>Background</span>
+        <div class="lock-wp-options">
+          <div class="lock-wp-opt" style="background:linear-gradient(135deg,#0a0f2c,#1e3799)" onclick="setLockBg('blue')"></div>
+          <div class="lock-wp-opt" style="background:linear-gradient(135deg,#0f0c29,#302b63)" onclick="setLockBg('purple')"></div>
+          <div class="lock-wp-opt" style="background:linear-gradient(135deg,#1a0030,#ff6ec7)" onclick="setLockBg('pink')"></div>
+          <div class="lock-wp-opt" style="background:linear-gradient(135deg,#0d2137,#11998e)" onclick="setLockBg('teal')"></div>
+        </div>
+      </div>
+      <div class="lc-row">
+        <span>Change PIN</span>
+        <button class="tool-btn" onclick="changePIN()">Change</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Main OS -->
+<div class="os-wrap" id="osWrap" style="display:none">
+
+  <!-- Custom Cursor -->
+  <div class="cursor-dot" id="cursorDot"></div>
+  <div class="cursor-ring" id="cursorRing"></div>
+
+  <!-- Wallpaper -->
+  <div class="wallpaper" id="wallpaper">
+    <div class="orb orb1"></div>
+    <div class="orb orb2"></div>
+    <div class="orb orb3"></div>
+    <div class="parallax-layer" id="parallaxLayer"></div>
+  </div>
+
+  <!-- Menu Bar -->
+  <div class="menubar" id="menubar">
+    <div class="menubar-left">
+      <span class="apple-icon">⌘</span>
+      <span class="menu-item active" id="activeAppName">MyOS</span>
+      <span class="menu-item">File</span>
+      <span class="menu-item">Edit</span>
+      <span class="menu-item">View</span>
+    </div>
+    <div class="menubar-center">
+      <span class="news-ticker" id="newsTicker">Loading news...</span>
+    </div>
+    <div class="menubar-right">
+      <span class="menu-item sys-stat" id="statCpu">CPU --</span>
+      <span class="menu-item sys-stat" id="statMem">RAM --</span>
+      <span class="menu-item" id="menuTime"></span>
+      <span class="menu-item" onclick="toggleSidePanel('quickPanel')">⚙</span>
+      <span class="menu-item" onclick="toggleSidePanel('notifPanel')">🔔</span>
+      <span class="menu-item" onclick="lockScreen()">🔒</span>
+    </div>
+  </div>
+
+  <!-- Context Menu -->
+  <div class="context-menu glass-strong" id="contextMenu" style="display:none">
+    <div class="ctx-item" onclick="setWallpaper('blue')">🎨 Change Wallpaper</div>
+    <div class="ctx-item" onclick="document.getElementById('wpFile').click()">📂 Custom Wallpaper</div>
+    <div class="ctx-item" onclick="toggleSidePanel('quickPanel')">⚙ Quick Settings</div>
+    <div class="ctx-item" onclick="ipcRenderer.invoke('take-screenshot')">📸 Screenshot</div>
+    <div class="ctx-divider"></div>
+    <div class="ctx-item" onclick="lockScreen()">🔒 Lock Screen</div>
+    <div class="ctx-item danger" onclick="exitApp()">✕ Exit MyOS</div>
+  </div>
+
+  <!-- Home Screen -->
+  <div class="homescreen" id="homescreen">
+    <div class="clock-widget">
+      <div class="clock-time" id="clock"></div>
+      <div class="clock-date" id="dateEl"></div>
+    </div>
+    <div class="search-wrap" id="searchWrap">
+      <div class="search-box glass-strong">
+        <span>🔍</span>
+        <input type="text" id="searchInput" placeholder="Search apps, files, anything..."
+          oninput="doSearch(this.value)" onfocus="showSearchRes()"/>
+        <kbd class="search-kbd">⌘K</kbd>
+      </div>
+      <div class="search-results glass-strong" id="searchResults" style="display:none"></div>
+    </div>
+    <div class="widgets-row">
+      <div class="widget glass-strong" id="wWeather">
+        <div class="widget-title">🌤 Weather</div>
+        <div class="widget-val" id="weatherTemp">--°C</div>
+        <div class="widget-sub" id="weatherDesc">Loading...</div>
+      </div>
+      <div class="widget glass-strong">
+        <div class="widget-title">💻 System</div>
+        <div class="widget-val" id="wRam">--%</div>
+        <div class="widget-sub" id="wCpu">RAM Used</div>
+      </div>
+      <div class="widget glass-strong" ondblclick="editNote()">
+        <div class="widget-title">📝 Notes</div>
+        <div class="widget-sub" id="noteText" style="font-size:13px;line-height:1.5">Double click to edit</div>
+      </div>
+      <div class="widget glass-strong">
+        <div class="widget-title">📅 Calendar</div>
+        <div class="widget-val" id="calDay"></div>
+        <div class="widget-sub" id="calMonth"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Quick Settings -->
+  <div class="side-panel glass-strong" id="quickPanel" style="display:none">
+    <div class="panel-header">
+      <span class="panel-title">⚙ Quick Settings</span>
+      <span class="close-btn" onclick="toggleSidePanel('quickPanel')">✕</span>
+    </div>
+    <div class="toggle-row"><span class="toggle-label">🌐 Wi-Fi</span><div class="toggle on" onclick="this.classList.toggle('on')"></div></div>
+    <div class="toggle-row"><span class="toggle-label">🔵 Bluetooth</span><div class="toggle" onclick="this.classList.toggle('on')"></div></div>
+    <div class="toggle-row"><span class="toggle-label">🌙 Dark Mode</span><div class="toggle on" onclick="this.classList.toggle('on')"></div></div>
+    <div class="toggle-row"><span class="toggle-label">✈ Airplane</span><div class="toggle" onclick="this.classList.toggle('on')"></div></div>
+    <div class="toggle-row">
+      <span class="toggle-label">🚀 Start with Windows</span>
+      <div class="toggle" id="startupToggle" onclick="toggleStartup(this)"></div>
+    </div>
+    <div class="slider-row"><span class="toggle-label">☀ Brightness</span><input type="range" min="0" max="100" value="75" class="slider"/></div>
+    <div class="slider-row"><span class="toggle-label">🔊 Volume</span><input type="range" min="0" max="100" value="50" class="slider" oninput="setVolume(this.value)"/></div>
+    <div class="panel-section">Accent Color</div>
+    <div class="color-options">
+      <div class="color-opt" style="background:#1e3799" onclick="setAccent('#1e3799')"></div>
+      <div class="color-opt" style="background:#7b61ff" onclick="setAccent('#7b61ff')"></div>
+      <div class="color-opt" style="background:#ff6b9d" onclick="setAccent('#ff6b9d')"></div>
+      <div class="color-opt" style="background:#11998e" onclick="setAccent('#11998e')"></div>
+      <div class="color-opt" style="background:#e55039" onclick="setAccent('#e55039')"></div>
+      <div class="color-opt" style="background:#f39c12" onclick="setAccent('#f39c12')"></div>
+    </div>
+    <div class="panel-section">Wallpaper</div>
+    <div class="wallpaper-options">
+      <div class="wp-option" style="background:linear-gradient(135deg,#0a0f2c,#1e3799)" onclick="setWallpaper('blue')"></div>
+      <div class="wp-option" style="background:linear-gradient(135deg,#0f0c29,#302b63)" onclick="setWallpaper('purple')"></div>
+      <div class="wp-option" style="background:linear-gradient(135deg,#1a1a2e,#16213e)" onclick="setWallpaper('dark')"></div>
+      <div class="wp-option" style="background:linear-gradient(135deg,#2d1b69,#11998e)" onclick="setWallpaper('teal')"></div>
+      <div class="wp-option" style="background:linear-gradient(135deg,#4a0072,#ff6ec7)" onclick="setWallpaper('pink')"></div>
+    </div>
+    <input type="file" id="wpFile" accept="image/*" style="display:none" onchange="setCustomWallpaper(this)"/>
+    <button class="tool-btn" style="width:100%;margin-top:8px" onclick="document.getElementById('wpFile').click()">📂 Custom Photo</button>
+    <div class="panel-section">Parallax</div>
+    <div class="toggle-row"><span class="toggle-label">✨ Parallax Effect</span><div class="toggle on" id="parallaxToggle" onclick="toggleParallax(this)"></div></div>
+    <div class="panel-section">System</div>
+    <button class="tool-btn" style="width:100%;margin-bottom:8px" onclick="ipcRenderer.invoke('take-screenshot').then(r=>showToast(r.success?'📸 Screenshot saved to Desktop':'❌ Screenshot failed'))">📸 Screenshot</button>
+    <button class="tool-btn danger-btn" style="width:100%" onclick="exitApp()">✕ Exit MyOS</button>
+  </div>
+
+  <!-- Notifications -->
+  <div class="side-panel glass-strong" id="notifPanel" style="display:none">
+    <div class="panel-header">
+      <span class="panel-title">🔔 Notifications</span>
+      <span class="close-btn" onclick="toggleSidePanel('notifPanel')">✕</span>
+    </div>
+    <div id="notifList">
+      <div class="notif-item"><span class="notif-dot blue"></span><div><div class="notif-title">MyOS Ready</div><div class="notif-sub">System loaded successfully</div></div></div>
+      <div class="notif-item"><span class="notif-dot green"></span><div><div class="notif-title">Windows Drive</div><div class="notif-sub">C: mounted and accessible</div></div></div>
+    </div>
+  </div>
+
+  <!-- Edge Panel -->
+  <div class="edge-tab" id="edgeTab" onclick="toggleEdge()">◀</div>
+  <div class="edge-panel glass-strong" id="edgePanel" style="display:none">
+    <div class="panel-title" style="margin-bottom:14px">Edge Panel</div>
+    <div class="edge-item" onclick="showHome()">🏠 Home</div>
+    <div class="edge-item" onclick="openPanel('filePanel')">📁 Files</div>
+    <div class="edge-item" onclick="openPanel('appPanel')">📱 Apps</div>
+    <div class="edge-item" onclick="openPanel('notesPanel')">📝 Notes</div>
+    <div class="edge-item" onclick="openPanel('calcPanel')">🧮 Calculator</div>
+    <div class="edge-item" onclick="openPanel('todoPanel')">✅ To-Do</div>
+    <div class="edge-item" onclick="toggleSidePanel('quickPanel')">⚙ Settings</div>
+    <div class="edge-item" onclick="lockScreen()">🔒 Lock</div>
+  </div>
+
+  <!-- File Browser -->
+  <div class="fullpanel glass-strong" id="filePanel" style="display:none">
+    <div class="panel-header">
+      <span class="panel-title">📁 Files</span>
+      <div style="display:flex;gap:10px;align-items:center">
+        <span class="breadcrumb" id="breadcrumb">Home</span>
+        <span class="view-btn" onclick="toggleView()">⊞</span>
+        <span class="close-btn" onclick="closePanel('filePanel')">✕</span>
+      </div>
+    </div>
+    <div class="file-layout">
+      <div class="file-sidebar" id="fileSidebar">
+        <div class="sidebar-section">Quick Access</div>
+      </div>
+      <div class="file-main">
+        <div class="file-toolbar">
+          <button class="tool-btn" onclick="goBack()">← Back</button>
+          <button class="tool-btn" onclick="goHome()">🏠 Home</button>
+          <input type="text" class="file-search" placeholder="🔍 Search files..." oninput="filterFiles(this.value)"/>
+        </div>
+        <div class="file-grid" id="fileGrid"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- App Library -->
+  <div class="fullpanel glass-strong" id="appPanel" style="display:none">
+    <div class="panel-header">
+      <span class="panel-title">📱 App Library</span>
+      <span class="close-btn" onclick="closePanel('appPanel')">✕</span>
+    </div>
+    <input type="text" class="app-search" placeholder="🔍 Search apps..." oninput="filterApps(this.value)"/>
+    <div class="app-grid" id="appGrid"></div>
+  </div>
+
+  <!-- Notes App -->
+  <div class="fullpanel glass-strong" id="notesPanel" style="display:none">
+    <div class="panel-header">
+      <span class="panel-title">📝 Notes</span>
+      <div style="display:flex;gap:8px">
+        <button class="tool-btn" onclick="saveNote()">💾 Save</button>
+        <span class="close-btn" onclick="closePanel('notesPanel')">✕</span>
+      </div>
+    </div>
+    <input type="text" class="note-title-input" id="noteTitleInput" placeholder="Note title..."/>
+    <textarea class="notes-area" id="notesArea" placeholder="Start writing..."></textarea>
+    <div class="notes-list" id="notesList"></div>
+  </div>
+
+  <!-- Calculator -->
+  <div class="floatpanel glass-strong" id="calcPanel" style="display:none">
+    <div class="panel-header">
+      <span class="panel-title">🧮 Calculator</span>
+      <span class="close-btn" onclick="closePanel('calcPanel')">✕</span>
+    </div>
+    <div class="calc-display" id="calcDisplay">0</div>
+    <div class="calc-grid">
+      <div class="calc-btn span2" onclick="calcClear()">AC</div>
+      <div class="calc-btn op" onclick="calcOp('%')">%</div>
+      <div class="calc-btn op" onclick="calcOp('/')">÷</div>
+      <div class="calc-btn" onclick="calcNum('7')">7</div>
+      <div class="calc-btn" onclick="calcNum('8')">8</div>
+      <div class="calc-btn" onclick="calcNum('9')">9</div>
+      <div class="calc-btn op" onclick="calcOp('*')">×</div>
+      <div class="calc-btn" onclick="calcNum('4')">4</div>
+      <div class="calc-btn" onclick="calcNum('5')">5</div>
+      <div class="calc-btn" onclick="calcNum('6')">6</div>
+      <div class="calc-btn op" onclick="calcOp('-')">−</div>
+      <div class="calc-btn" onclick="calcNum('1')">1</div>
+      <div class="calc-btn" onclick="calcNum('2')">2</div>
+      <div class="calc-btn" onclick="calcNum('3')">3</div>
+      <div class="calc-btn op" onclick="calcOp('+')">+</div>
+      <div class="calc-btn span2" onclick="calcNum('0')">0</div>
+      <div class="calc-btn" onclick="calcDot()">.</div>
+      <div class="calc-btn accent" onclick="calcEquals()">=</div>
+    </div>
+  </div>
+
+  <!-- To-Do -->
+  <div class="floatpanel glass-strong" id="todoPanel" style="display:none">
+    <div class="panel-header">
+      <span class="panel-title">✅ To-Do</span>
+      <span class="close-btn" onclick="closePanel('todoPanel')">✕</span>
+    </div>
+    <div class="todo-input-row">
+      <input type="text" class="todo-input" id="todoInput" placeholder="Add a task..." onkeydown="if(event.key==='Enter')addTodo()"/>
+      <button class="tool-btn accent-btn" onclick="addTodo()">+</button>
+    </div>
+    <div class="todo-list" id="todoList"></div>
+  </div>
+
+  <!-- App Float Window -->
+  <div class="app-float glass-strong" id="appFloat" style="display:none">
+    <div class="app-float-header" id="appFloatHeader">
+      <div class="app-float-icon" id="appFloatIcon">📱</div>
+      <div class="app-float-name" id="appFloatName">App</div>
+      <div style="display:flex;gap:8px;margin-left:auto">
+        <button class="tool-btn accent-btn" id="appFloatLaunch" onclick="launchCurrentApp()">▶ Open</button>
+        <span class="close-btn" onclick="closeAppFloat()">✕</span>
+      </div>
+    </div>
+    <div class="app-float-body">
+      <div class="app-float-bigicon" id="appFloatBigIcon">📱</div>
+      <div class="app-float-info">
+        <div class="app-float-fullname" id="appFloatFullName">Application</div>
+        <div class="app-float-path" id="appFloatPath"></div>
+        <div class="app-float-actions">
+          <button class="tool-btn" onclick="pinAppToDock()">📌 Pin to Dock</button>
+          <button class="tool-btn accent-btn" onclick="launchCurrentApp()">▶ Launch</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Toast -->
+  <div class="toast glass-strong" id="toast" style="display:none"></div>
+
+  <!-- Dock -->
+  <div class="dock-wrap" id="dockWrap">
+    <div class="dock glass-strong" id="dock">
+      <div class="dock-icon" title="Home" onclick="showHome()" data-label="Home">🏠</div>
+      <div class="dock-icon" title="Files" onclick="openPanel('filePanel')" data-label="Files">📁</div>
+      <div class="dock-icon" title="Apps" onclick="openPanel('appPanel')" data-label="Apps">📱</div>
+      <div class="dock-icon" title="Notes" onclick="openPanel('notesPanel')" data-label="Notes">📝</div>
+      <div class="dock-icon" title="Calculator" onclick="openPanel('calcPanel')" data-label="Calc">🧮</div>
+      <div class="dock-icon" title="To-Do" onclick="openPanel('todoPanel')" data-label="Tasks">✅</div>
+      <div class="dock-sep"></div>
+      <div class="dock-icon" title="Settings" onclick="toggleSidePanel('quickPanel')" data-label="Settings">⚙</div>
+      <div class="dock-icon exit-btn" title="Exit" onclick="exitApp()" data-label="Exit">✕</div>
+    </div>
+    <div class="dock-labels" id="dockLabels"></div>
+  </div>
+
+</div>
+
+<script>
+const { ipcRenderer } = require('electron')
+
+let PIN = '1234'
+let pinEntered = ''
+let allApps = []
+let allFiles = []
+let fileHistory = []
+let currentPath = ''
+let isListView = false
+let parallaxOn = true
+let currentAppPath = ''
+let currentAppName = ''
+let todos = JSON.parse(localStorage.getItem('todos')||'[]')
+let notes = JSON.parse(localStorage.getItem('notes')||'[]')
+let calcVal = ''
+let calcPrev = ''
+let calcOper = ''
+let calcNew = true
+
+const WEATHER_KEY = 'YOUR_API_KEY_HERE'
+const WEATHER_CITY = 'Delhi'
+
+const wallpapers = {
+  blue:   'linear-gradient(135deg,#0a0f2c,#0a3d62,#1e3799)',
+  purple: 'linear-gradient(135deg,#0f0c29,#302b63,#24243e)',
+  dark:   'linear-gradient(135deg,#0a0a0a,#1a1a2e,#16213e)',
+  teal:   'linear-gradient(135deg,#0d2137,#2d1b69,#11998e)',
+  pink:   'linear-gradient(135deg,#1a0030,#4a0072,#ff6ec7)'
+}
+
+const lockBgs = {
+  blue:   'linear-gradient(135deg,#0a0f2c,#1e3799)',
+  purple: 'linear-gradient(135deg,#0f0c29,#302b63)',
+  pink:   'linear-gradient(135deg,#1a0030,#ff6ec7)',
+  teal:   'linear-gradient(135deg,#0d2137,#11998e)'
+}
+
+// ── Startup Animation ──
+window.onload = () => {
+  const fill = document.getElementById('startupFill')
+  let w = 0
+  const iv = setInterval(() => {
+    w += 2
+    fill.style.width = w + '%'
+    if(w >= 100) {
+      clearInterval(iv)
+      setTimeout(() => {
+        document.getElementById('startupScreen').style.opacity = '0'
+        setTimeout(() => {
+          document.getElementById('startupScreen').style.display = 'none'
+          document.getElementById('lockscreen').style.display = 'flex'
+        }, 500)
+      }, 300)
+    }
+  }, 20)
+}
+
+// ── Time ──
+function updateTime() {
+  const now = new Date()
+  const t = now.toLocaleTimeString('en-US',{hour:'2-digit',minute:'2-digit'})
+  const d = now.toLocaleDateString('en-US',{weekday:'long',month:'long',day:'numeric'})
+  document.getElementById('menuTime').textContent = t
+  document.getElementById('clock').textContent = now.toLocaleTimeString('en-US',{hour:'2-digit',minute:'2-digit',hour12:true})
+  document.getElementById('dateEl').textContent = d
+  document.getElementById('lockTime').textContent = t
+  document.getElementById('lockDate').textContent = d
+  document.getElementById('calDay').textContent = now.getDate()
+  document.getElementById('calMonth').textContent = now.toLocaleDateString('en-US',{month:'long'})
+}
+updateTime()
+setInterval(updateTime, 1000)
+
+// ── PIN ──
+function pinInput(n) {
+  if(pinEntered.length >= 4) return
+  pinEntered += n
+  document.getElementById('d'+(pinEntered.length-1)).classList.add('filled')
+  if(pinEntered.length === 4) {
+    setTimeout(() => {
+      if(pinEntered === PIN) {
+        document.getElementById('lockscreen').style.display = 'none'
+        document.getElementById('osWrap').style.display = 'block'
+        init()
+      } else {
+        document.getElementById('pinError').textContent = '❌ Wrong PIN'
+        document.getElementById('lockscreen').style.animation = 'shake 0.4s'
+        setTimeout(() => document.getElementById('lockscreen').style.animation = '', 400)
+        pinEntered = ''
+        for(let i=0;i<4;i++) document.getElementById('d'+i).classList.remove('filled')
+      }
+    }, 200)
+  }
+}
+
+function pinDelete() {
+  if(!pinEntered.length) return
+  pinEntered = pinEntered.slice(0,-1)
+  document.getElementById('d'+pinEntered.length).classList.remove('filled')
+  document.getElementById('pinError').textContent = ''
+}
+
+function lockScreen() {
+  document.getElementById('osWrap').style.display = 'none'
+  document.getElementById('lockscreen').style.display = 'flex'
+  pinEntered = ''
+  for(let i=0;i<4;i++) document.getElementById('d'+i).classList.remove('filled')
+}
+
+function changePIN() {
+  const newPin = prompt('Enter new 4-digit PIN:')
+  if(newPin && /^\d{4}$/.test(newPin)) { PIN = newPin; showToast('✅ PIN changed!') }
+  else showToast('❌ PIN must be 4 digits')
+}
+
+function toggleLockCustomize() {
+  const p = document.getElementById('lockCustomizePanel')
+  p.style.display = p.style.display==='none' ? 'block' : 'none'
+}
+
+function setLockBg(name) {
+  document.getElementById('lockBg').style.background = lockBgs[name]
+}
+
+function setClockStyle(style) {
+  document.getElementById('lockTime').style.fontWeight = style==='minimal' ? '100' : '200'
+}
+
+// ── Init ──
+async function init() {
+  const home = await ipcRenderer.invoke('get-home-dir')
+  currentPath = home
+  allApps = await ipcRenderer.invoke('get-apps')
+  loadSidebar()
+  loadStats()
+  fetchWeather()
+  renderTodos()
+  renderNotes()
+  setInterval(loadStats, 5000)
+  showToast('👋 Welcome to MyOS!')
+}
+
+// ── System Stats ──
+async function loadStats() {
+  const s = await ipcRenderer.invoke('get-system-stats')
+  document.getElementById('statMem').textContent = `RAM ${s.mem}%`
+  document.getElementById('wRam').textContent = `${s.mem}%`
+  document.getElementById('wCpu').textContent = `${s.cpuModel}`
+}
+
+// ── Weather ──
+async function fetchWeather() {
+  try {
+    const r = await fetch(`https://api.openweathermap.org/data/2.5/weather?q=${WEATHER_CITY}&appid=${WEATHER_KEY}&units=metric`)
+    const d = await r.json()
+    document.getElementById('weatherTemp').textContent = Math.round(d.main.temp) + '°C'
+    document.getElementById('weatherDesc').textContent = d.weather[0].description + ' · ' + WEATHER_CITY
+  } catch {
+    document.getElementById('weatherTemp').textContent = '28°C'
+    document.getElementById('weatherDesc').textContent = 'Sunny · Delhi'
+  }
+}
+
+// ── Panels ──
+function toggleSidePanel(id) {
+  const el = document.getElementById(id)
+  const vis = el.style.display !== 'none'
+  document.querySelectorAll('.side-panel').forEach(p => p.style.display='none')
+  if(!vis) el.style.display = 'block'
+}
+
+function openPanel(id) {
+  document.querySelectorAll('.fullpanel,.floatpanel').forEach(p => p.style.display='none')
+  document.getElementById('homescreen').style.display = 'none'
+  document.getElementById(id).style.display = id==='calcPanel'||id==='todoPanel' ? 'block' : 'flex'
+  if(id==='filePanel') loadFiles(currentPath)
+  if(id==='appPanel') renderApps(allApps)
+}
+
+function closePanel(id) {
+  document.getElementById(id).style.display = 'none'
+  document.getElementById('homescreen').style.display = 'flex'
+}
+
+function showHome() {
+  document.querySelectorAll('.fullpanel,.floatpanel').forEach(p => p.style.display='none')
+  document.getElementById('homescreen').style.display = 'flex'
+}
+
+// ── Files ──
+async function loadSidebar() {
+  const folders = await ipcRenderer.invoke('get-quick-folders')
+  const sb = document.getElementById('fileSidebar')
+  sb.innerHTML = '<div class="sidebar-section">Quick Access</div>' +
+    folders.map(f=>`<div class="sidebar-item" onclick="loadFiles('${f.path.replace(/\\/g,'\\\\')}')">${f.icon} ${f.name}</div>`).join('')
+}
+
+async function loadFiles(dirPath) {
+  currentPath = dirPath
+  document.getElementById('breadcrumb').textContent = dirPath
+  allFiles = await ipcRenderer.invoke('get-files', dirPath)
+  renderFiles(allFiles)
+}
+
+function renderFiles(files) {
+  const grid = document.getElementById('fileGrid')
+  if(!files.length) { grid.innerHTML='<div class="empty-msg">Empty or access denied</div>'; return }
+  grid.className = isListView ? 'file-list-view' : 'file-grid'
+  grid.innerHTML = files.map(f => {
+    const icon = f.isDir ? '📁' : getIcon(f.ext)
+    const safe = f.path.replace(/\\/g,'\\\\').replace(/'/g,"\\'")
+    return isListView
+      ? `<div class="file-row" onclick="handleFile(${f.isDir},'${safe}')">${icon} <span>${f.name}</span></div>`
+      : `<div class="file-card glass-card" onclick="handleFile(${f.isDir},'${safe}')"><div class="file-icon">${icon}</div><div class="file-name">${f.name}</div></div>`
+  }).join('')
+}
+
+function handleFile(isDir, filePath) {
+  if(isDir) { fileHistory.push(currentPath); loadFiles(filePath) }
+  else ipcRenderer.invoke('open-file', filePath)
+}
+
+function filterFiles(q) { renderFiles(q ? allFiles.filter(f=>f.name.toLowerCase().includes(q.toLowerCase())) : allFiles) }
+function goBack() { if(fileHistory.length) loadFiles(fileHistory.pop()) }
+async function goHome() { const h = await ipcRenderer.invoke('get-home-dir'); loadFiles(h) }
+function toggleView() { isListView = !isListView; renderFiles(allFiles) }
+
+function getIcon(ext) {
+  const m={'.jpg':'🖼','.jpeg':'🖼','.png':'🖼','.gif':'🖼','.mp3':'🎵','.wav':'🎵','.mp4':'🎬','.mkv':'🎬','.pdf':'📄','.doc':'📝','.docx':'📝','.txt':'📄','.exe':'⚙','.zip':'🗜','.rar':'🗜','.js':'💻','.html':'🌐','.css':'🎨','.py':'🐍','.xlsx':'📊','.pptx':'📊','.mp3':'🎵'}
+  return m[ext]||'📄'
+}
+
+// ── Apps ──
+const appColors=['#1e3799','#7b61ff','#e55039','#11998e','#f39c12','#8e44ad','#2980b9','#27ae60','#c0392b','#16a085']
+
+function renderApps(apps) {
+  document.getElementById('appGrid').innerHTML = apps.map((a,i)=>{
+    const safe = a.path.replace(/\\/g,'\\\\').replace(/'/g,"\\'")
+    const c = appColors[i%appColors.length]
+    return `<div class="app-card" onclick="showAppFloat('${safe}','${a.name.replace(/'/g,"\\'")}')">
+      <div class="app-icon-wrap glass-card" style="background:${c}22;border-color:${c}44">
+        <div class="app-letter" style="color:${c}">${a.name.charAt(0).toUpperCase()}</div>
+      </div>
+      <div class="app-name">${a.name.substring(0,14)}</div>
+    </div>`
+  }).join('')
+}
+
+function filterApps(q) { renderApps(q ? allApps.filter(a=>a.name.toLowerCase().includes(q.toLowerCase())) : allApps) }
+
+function showAppFloat(appPath, appName) {
+  currentAppPath = appPath
+  currentAppName = appName
+  const letter = appName.charAt(0).toUpperCase()
+  const idx = allApps.findIndex(a=>a.name===appName)
+  const c = appColors[idx%appColors.length] || '#1e3799'
+  document.getElementById('appFloatIcon').textContent = letter
+  document.getElementById('appFloatBigIcon').textContent = letter
+  document.getElementById('appFloatBigIcon').style.background = c+'33'
+  document.getElementById('appFloatBigIcon').style.color = c
+  document.getElementById('appFloatName').textContent = appName
+  document.getElementById('appFloatFullName').textContent = appName
+  document.getElementById('appFloatPath').textContent = appPath
+  document.getElementById('appFloat').style.display = 'block'
+}
+
+function closeAppFloat() { document.getElementById('appFloat').style.display='none' }
+
+function launchCurrentApp() {
+  ipcRenderer.invoke('open-app', currentAppPath, currentAppName)
+  showToast(`▶ Launching ${currentAppName}...`)
+  closeAppFloat()
+}
+
+function pinAppToDock() {
+  const dock = document.getElementById('dock')
+  const sep = dock.querySelector('.dock-sep')
+  const safe = currentAppPath.replace(/\\/g,'\\\\').replace(/'/g,"\\'")
+  const name = currentAppName
+  const letter = name.charAt(0).toUpperCase()
+  const div = document.createElement('div')
+  div.className = 'dock-icon pinned'
+  div.title = name
+  div.setAttribute('data-label', name.substring(0,6))
+  div.textContent = letter
+  div.onclick = () => showAppFloat(safe, name)
+  dock.insertBefore(div, sep)
+  showToast(`📌 ${name} pinned to dock!`)
+  closeAppFloat()
+}
+
+// ── Search ──
+async function doSearch(q) {
+  const res = document.getElementById('searchResults')
+  if(!q){ res.style.display='none'; return }
+  res.style.display = 'block'
+  const matched = allApps.filter(a=>a.name.toLowerCase().includes(q.toLowerCase())).slice(0,8)
+  res.innerHTML = matched.length
+    ? matched.map(a=>{const s=a.path.replace(/\\/g,'\\\\').replace(/'/g,"\\'");return`<div class="search-item" onclick="showAppFloat('${s}','${a.name.replace(/'/g,"\\'")}')"><span class="search-icon-letter">${a.name.charAt(0)}</span>${a.name}</div>`}).join('')
+    : '<div class="search-item muted">No results</div>'
+}
+
+function showSearchRes() {
+  if(document.getElementById('searchInput').value) document.getElementById('searchResults').style.display='block'
+}
+
+document.addEventListener('click', e=>{
+  if(!e.target.closest('.search-wrap')) document.getElementById('searchResults').style.display='none'
+  if(!e.target.closest('.context-menu')) document.getElementById('contextMenu').style.display='none'
+})
+
+// ── Context Menu ──
+document.addEventListener('contextmenu', e=>{
+  e.preventDefault()
+  const m = document.getElementById('contextMenu')
+  m.style.left = Math.min(e.clientX, window.innerWidth-180)+'px'
+  m.style.top = Math.min(e.clientY, window.innerHeight-220)+'px'
+  m.style.display = 'block'
+})
+
+// ── Wallpaper ──
+function setWallpaper(name) {
+  document.getElementById('wallpaper').style.background = wallpapers[name]||wallpapers.blue
+}
+
+function setCustomWallpaper(input) {
+  const file = input.files[0]
+  if(!file) return
+  const url = URL.createObjectURL(file)
+  document.getElementById('wallpaper').style.cssText += `;background:url('${url}') center/cover`
+  document.getElementById('parallaxLayer').style.backgroundImage = `url('${url}')`
+}
+
+// ── Accent ──
+function setAccent(color) {
+  document.documentElement.style.setProperty('--accent', color)
+}
+
+// ── Parallax ──
+document.addEventListener('mousemove', e=>{
+  const dot = document.getElementById('cursorDot')
+  const ring = document.getElementById('cursorRing')
+  dot.style.left = e.clientX+'px'
+  dot.style.top = e.clientY+'px'
+  setTimeout(()=>{ ring.style.left=e.clientX+'px'; ring.style.top=e.clientY+'px' },80)
+  if(!parallaxOn) return
+  const x = (e.clientX/window.innerWidth - 0.5)*20
+  const y = (e.clientY/window.innerHeight - 0.5)*20
+  document.querySelectorAll('.orb').forEach((o,i)=>{ o.style.transform=`translate(${x*(i+1)*0.5}px,${y*(i+1)*0.5}px)` })
+  const pl = document.getElementById('parallaxLayer')
+  if(pl.style.backgroundImage) pl.style.transform = `translate(${x*0.3}px,${y*0.3}px) scale(1.05)`
+})
+
+function toggleParallax(el) { parallaxOn=!parallaxOn; el.classList.toggle('on') }
+
+// ── Edge Panel ──
+function toggleEdge() {
+  const ep = document.getElementById('edgePanel')
+  const et = document.getElementById('edgeTab')
+  const open = ep.style.display!=='none'
+  ep.style.display = open?'none':'block'
+  et.textContent = open?'◀':'▶'
+}
+
+// ── Calculator ──
+function calcNum(n) {
+  if(calcNew) { calcVal=n; calcNew=false } else calcVal+=n
+  document.getElementById('calcDisplay').textContent = calcVal
+}
+function calcDot() {
+  if(!calcVal.includes('.')) { calcVal+='.'; document.getElementById('calcDisplay').textContent=calcVal }
+}
+function calcOp(op) {
+  calcPrev=calcVal; calcOper=op; calcNew=true
+}
+function calcEquals() {
+  if(!calcPrev||!calcOper) return
+  let res=0
+  const a=parseFloat(calcPrev), b=parseFloat(calcVal)
+  if(calcOper==='+') res=a+b
+  else if(calcOper==='-') res=a-b
+  else if(calcOper==='*') res=a*b
+  else if(calcOper==='/') res=b!==0?a/b:'Error'
+  else if(calcOper==='%') res=a%b
+  calcVal=String(res)
+  document.getElementById('calcDisplay').textContent=calcVal
+  calcPrev=''; calcOper=''; calcNew=true
+}
+function calcClear() {
+  calcVal=''; calcPrev=''; calcOper=''; calcNew=true
+  document.getElementById('calcDisplay').textContent='0'
+}
+
+// ── To-Do ──
+function addTodo() {
+  const input = document.getElementById('todoInput')
+  if(!input.value.trim()) return
+  todos.push({ text:input.value.trim(), done:false })
+  localStorage.setItem('todos',JSON.stringify(todos))
+  input.value=''
+  renderTodos()
+}
+function toggleTodo(i) {
+  todos[i].done=!todos[i].done
+  localStorage.setItem('todos',JSON.stringify(todos))
+  renderTodos()
+}
+function deleteTodo(i) {
+  todos.splice(i,1)
+  localStorage.setItem('todos',JSON.stringify(todos))
+  renderTodos()
+}
+function renderTodos() {
+  document.getElementById('todoList').innerHTML = todos.map((t,i)=>
+    `<div class="todo-item ${t.done?'done':''}">
+      <span onclick="toggleTodo(${i})" class="todo-check">${t.done?'✅':'⬜'}</span>
+      <span class="todo-text">${t.text}</span>
+      <span onclick="deleteTodo(${i})" class="todo-del">🗑</span>
+    </div>`
+  ).join('') || '<div class="empty-msg">No tasks yet!</div>'
+}
+
+// ── Notes ──
+function saveNote() {
+  const title = document.getElementById('noteTitleInput').value.trim()
+  const body = document.getElementById('notesArea').value.trim()
+  if(!title&&!body) return
+  notes.unshift({ title:title||'Untitled', body, date:new Date().toLocaleDateString() })
+  localStorage.setItem('notes',JSON.stringify(notes))
+  document.getElementById('noteTitleInput').value=''
+  document.getElementById('notesArea').value=''
+  renderNotes()
+  showToast('📝 Note saved!')
+}
+function renderNotes() {
+  document.getElementById('notesList').innerHTML = notes.map((n,i)=>
+    `<div class="note-card glass-card">
+      <div class="note-card-title">${n.title}</div>
+      <div class="note-card-body">${n.body.substring(0,80)}${n.body.length>80?'...':''}</div>
+      <div class="note-card-date">${n.date}</div>
+    </div>`
+  ).join('')
+}
+function editNote() {
+  const val = prompt('Quick note:',document.getElementById('noteText').textContent)
+  if(val!==null) document.getElementById('noteText').textContent=val
+}
+
+// ── Startup Toggle ──
+async function toggleStartup(el) {
+  el.classList.toggle('on')
+  if(el.classList.contains('on')) {
+    const r = await ipcRenderer.invoke('register-startup')
+    showToast(r.success?'🚀 MyOS will start with Windows!':'❌ Could not register startup')
+  } else {
+    const r = await ipcRenderer.invoke('remove-startup')
+    showToast(r.success?'✅ Startup removed':'❌ Could not remove startup')
+  }
+}
+
+// ── Toast ──
+function showToast(msg) {
+  const t = document.getElementById('toast')
+  t.textContent = msg
+  t.style.display = 'block'
+  t.style.opacity = '1'
+  setTimeout(()=>{ t.style.opacity='0'; setTimeout(()=>t.style.display='none',400) },3000)
+}
+
+// ── Keyboard Shortcuts ──
+document.addEventListener('keydown', e=>{
+  if(e.metaKey||e.ctrlKey) {
+    if(e.key==='k') { e.preventDefault(); document.getElementById('searchInput').focus(); showHome() }
+    if(e.key==='h') { e.preventDefault(); showHome() }
+    if(e.key==='f') { e.preventDefault(); openPanel('filePanel') }
+    if(e.key==='a') { e.preventDefault(); openPanel('appPanel') }
+    if(e.key==='n') { e.preventDefault(); openPanel('notesPanel') }
+    if(e.key==='t') { e.preventDefault(); openPanel('todoPanel') }
+    if(e.key==='l') { e.preventDefault(); lockScreen() }
+    if(e.key==='q') { e.preventDefault(); exitApp() }
+  }
+  if(e.key==='Escape') {
+    document.querySelectorAll('.fullpanel,.floatpanel,.side-panel').forEach(p=>p.style.display='none')
+    document.getElementById('homescreen').style.display='flex'
+  }
+})
+
+// ── Volume ──
+function setVolume(v) { showToast(`🔊 Volume: ${v}%`) }
+
+// ── Dynamic Wallpaper ──
+function setTimeWallpaper() {
+  const h = new Date().getHours()
+  if(h>=6&&h<12) setWallpaper('blue')
+  else if(h>=12&&h<18) setWallpaper('teal')
+  else if(h>=18&&h<21) setWallpaper('purple')
+  else setWallpaper('dark')
+}
+setTimeWallpaper()
+
+function exitApp() { ipcRenderer.invoke('quit') }
+</script>
+</body>
+</html>
